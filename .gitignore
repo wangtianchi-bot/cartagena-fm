@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.local
+data/
+cache/
+/user/
+*.sqlite
+.DS_Store
+assets/Radio.iconset/

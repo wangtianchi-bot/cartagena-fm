@@ -1,0 +1,19 @@
+{
+  "name": "cartagena-fm",
+  "version": "0.1.0",
+  "description": "私人中文 AI 电台 Agent —— 跑在自己电脑上的本地电台：懂你的品味、看得到日程和天气，越听越懂你",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/**/*.test.js",
+    "netease": "npx NeteaseCloudMusicApi@latest"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "openai": "^6.9.1",
+    "ws": "^8.21.0"
+  }
+}
