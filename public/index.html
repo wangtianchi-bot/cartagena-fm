@@ -324,6 +324,29 @@
   #hv-send { width: 42px; border-radius: 12px; border: 0; background: var(--green); color: #0b0d0b;
              font-size: 15px; cursor: pointer; }
 
+  /* ===== V1.2.1 状态设计四件套 ===== */
+  /* ① OFF AIR 主动作：开台是全页唯一要紧的事，给它 hero 里的大按钮；开播后让位 */
+  /* 注意别给它显式 display：会压过 hidden 属性，开播后就藏不掉（踩过） */
+  #btn-start-hero { margin-top: 12px; position: relative; z-index: 1;
+    font: 13px/1 var(--mono); letter-spacing: 6px; font-weight: 700;
+    color: #0b0d0b; background: var(--green); border: 0; border-radius: 9px;
+    padding: 13px 40px 13px 46px; cursor: pointer;
+    box-shadow: 0 0 22px rgba(61,220,132,.22); touch-action: manipulation; }
+  #btn-start-hero:hover { box-shadow: 0 0 34px rgba(61,220,132,.42); }
+  /* ② ON AIR 布局权重切换：开播后时钟从主角退成挂钟，把注意力让给正在播的歌 */
+  #app.onair #clock { font: 26px 'PixelClock', var(--mono); padding: 8px 0 6px; }
+  #app.onair #dateline { font-size: 10px; }
+  /* ③ 对话卡空状态：第一次打开不给一片黑，告诉人这台机器会什么 */
+  #feed-empty { margin: auto; text-align: center; color: var(--faint);
+                font-size: 11px; letter-spacing: 1px; line-height: 2.2; }
+  #feed-empty .fe-tips { display: flex; gap: 18px; justify-content: center;
+                         flex-wrap: wrap; color: var(--dim); margin-top: 6px; }
+  /* ④ 氛围选中态 + 周报专属卡片 */
+  .mood.on { color: var(--green); border-color: rgba(61,220,132,.5); background: var(--green-dim); }
+  .msg.sys.report .body { background: var(--green-dim); border: 1px solid rgba(61,220,132,.35);
+    color: var(--fg); font-size: 11px; letter-spacing: .5px; border-radius: 11px; padding: 10px 14px; }
+  .msg.sys.report .replay { color: var(--green); }
+
   footer { display: flex; justify-content: space-between; padding: 0 4px 10px;
            font-size: 9px; letter-spacing: 3px; color: var(--faint); }
   #conn.ok { color: var(--green); }
@@ -358,6 +381,7 @@
     <div id="clock"><span id="clock-hh">--</span><span class="colon">:</span><span id="clock-mm">--</span></div>
     <div id="dateline">—</div>
     <div id="onair"><span class="dot"></span><span id="onair-text">OFF AIR</span></div>
+    <button id="btn-start-hero" aria-label="开台">▶ 开台</button>
     <div id="stage" aria-live="polite"></div>
   </div>
 
@@ -395,18 +419,23 @@
       <span class="dot"></span>与 DJ 的对话
       <span id="chat-mode">电台模式 · 发消息＝点歌/换氛围</span>
     </div>
-    <div id="feed" aria-live="polite"></div>
+    <div id="feed" aria-live="polite">
+      <div id="feed-empty">
+        <div>还没开台——点上面的「开台」，卡卡会为这个时段开一段节目</div>
+        <div class="fe-tips"><span>💬 发消息＝点歌 / 换氛围</span><span>📞 打进热线和卡卡聊天</span><span>🌧 下方一键切氛围</span></div>
+      </div>
+    </div>
   </div>
 
   <div id="composer">
     <button id="btn-hotline" aria-label="打进热线直播间" title="打进热线直播间，和 DJ 面对面聊">📞</button>
     <button id="btn-call" aria-label="说话转文字" title="说话转文字：点按开始/结束，或按住说完松手">🎙</button>
     <input id="text-input" name="message" autocomplete="off" enterkeyhint="send"
-           aria-label="对 DJ 说点什么" placeholder="Say something to the DJ…">
+           aria-label="对 DJ 说点什么" placeholder="和卡卡说点什么…">
     <button id="btn-send" aria-label="发送" title="发送">↑</button>
   </div>
   <footer>
-    <span class="foot-left">CARTAGENA FM · V1.2.0
+    <span class="foot-left">CARTAGENA FM · V1.2.1
       <button id="wx" hidden aria-label="当前天气，点击切换城市" title="切换城市"></button>
     </span>
     <span id="conn">CONNECTING…</span>
@@ -456,6 +485,7 @@ const $ = (id) => document.getElementById(id);
 const music = $('music'), voice = $('voice');
 
 // ===== 像素大时钟（Press Start 2P，冒号呼吸）=====
+let moodLabel = ''; // V1.2.1 最近点的氛围：顶栏跟着显示，让「点了氛围」立刻有回执
 function drawClock() {
   const now = new Date();
   $('clock-hh').textContent = String(now.getHours()).padStart(2, '0');
@@ -466,7 +496,7 @@ function drawClock() {
     document.createTextNode(week.charAt(0) + week.slice(1).toLowerCase()),
     Object.assign(document.createElement('span'), { className: 'sub', textContent: `${String(now.getDate()).padStart(2,'0')} ${mon} ${now.getFullYear()}` }));
   const slot = ['深夜','深夜','深夜','深夜','深夜','深夜','清晨','清晨','清晨','清晨','清晨','上午','中午','中午','下午','下午','下午','下午','晚上','晚上','晚上','晚上','深夜','深夜'][now.getHours()];
-  $('ambient').textContent = `${slot} · 陪你听歌`;
+  $('ambient').textContent = moodLabel ? `${slot} · ${moodLabel}氛围` : `${slot} · 陪你听歌`;
 }
 drawClock(); setInterval(drawClock, 1000);
 
@@ -499,11 +529,14 @@ function setStage(t) {
 function setOnAir(live, label) {
   $('onair').classList.toggle('live', live);
   $('onair-text').textContent = label || (live ? 'ON AIR' : 'OFF AIR');
+  $('app').classList.toggle('onair', live);   // V1.2.1 开播后时钟让位给正在播的歌
+  $('btn-start-hero').hidden = started;       // 开台动作发出后，大按钮退场
 }
 
 // ===== 对话卡信息流 =====
 function addMsg(kind, who, text, ttsUrl = null) {
   if (!text) return null;
+  $('feed-empty')?.remove(); // 有第一条内容，空状态引导退场
   const wrap = document.createElement('div'); wrap.className = `msg ${kind}`;
   if (kind !== 'sys') {
     const meta = document.createElement('div'); meta.className = 'meta';
@@ -693,7 +726,9 @@ function handleMsg(msg) {
   if (msg.type === 'job-status') {
     console.warn('job failed:', msg);
     if (msg.job === 'start') {
+      started = false; // 没开成就回到未开播态，大按钮回来、早间自动开播也不受阻
       $('btn-start').disabled = false;
+      $('btn-start').textContent = '开台';
       setStage(''); setOnAir(false, '开台失败 · 点击重试');
     }
     if (msg.job === 'voice' || msg.job === 'message') {
@@ -881,13 +916,18 @@ $('btn-start').onclick = () => {
   post('/api/start');
   prewarmMic(); // 借开台手势提前要麦克风权限：按下即录，不吞字
 };
+$('btn-start-hero').onclick = () => $('btn-start').click(); // hero 大按钮＝同一个开台
 $('btn-pause').onclick = () => { music.paused ? music.play() : music.pause(); };
 $('btn-next').onclick = () => { reportSignal('skip'); playTrack(queueIdx + 1); };
 
 // 情绪快捷条 → 文字消息（F5 情绪指令，走 LLM 编排）
+// V1.2.1：点了立刻给回执——按钮亮起 + 顶栏跟着换氛围，不让人对着无反应的界面等 DJ
 for (const b of document.querySelectorAll('.mood-btn')) {
   b.onclick = () => {
-    setStage('热线接通中');
+    for (const x of document.querySelectorAll('.mood-btn')) x.classList.toggle('on', x === b);
+    moodLabel = b.textContent.trim().replace(/^\S+\s*/, ''); // 去掉表情，留「雨天」这类词
+    drawClock();
+    setStage('卡卡收到，按这个氛围调歌单');
     post('/api/message', { text: b.dataset.text, queued: queuedPayload() });
   };
 }
@@ -1249,6 +1289,7 @@ function tasteReportArrived(report, { silent = false } = {}) {
   if (report.status !== 'pending') return;
   const m = addMsg('sys', '', '📊 品味观察周报来了——这周电台对你的观察，看完勾选要不要合入档案');
   if (m) {
+    m.classList.add('report'); // 一周只来一次的东西，配得上一张高亮卡片
     const b = document.createElement('button');
     b.className = 'replay'; b.textContent = '查看周报'; b.setAttribute('aria-label', '查看品味观察周报');
     b.onclick = showTasteReport;
@@ -1331,7 +1372,7 @@ $('btn-hotline').onclick = () => {
 // ===== 🎙 麦克风（V1.1.3：只做"说话转文字"）=====
 // 点按开始/再按结束，或按住说话松手——两种手势都把转写文字填进输入框，发送由你点确认
 const VOICE_MAX_MS = 30000, LONGPRESS_MS = 350;
-const PLACEHOLDER = 'Say something to the DJ…';
+const PLACEHOLDER = '和卡卡说点什么…';
 let micStream = null;
 let recorder = null, recChunks = [], recTimer = null, lpTimer = null;
 let dictating = false;   // 听写进行中（单击开启，再击结束）
