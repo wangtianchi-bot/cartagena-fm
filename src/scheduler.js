@@ -3,7 +3,7 @@
 // 设计约束：vibe check 类口播只广播给前端排到下一个接缝（F3 红线：绝不压人声段）；
 // 没有客户端连着就不烧 LLM/TTS（azu 不在听，说给谁呢）。
 import { prepareDayPlan as realPrepareDayPlan } from './dayplan.js';
-import { prepareIntro as realPrepareIntro } from './intro.js';
+import { prepareIntro as realPrepareIntro, readIntro as realReadIntro } from './intro.js';
 import { runVibeCheck as realRunVibeCheck } from './pipeline.js';
 import { getSchedule as realGetSchedule } from './calendar.js';
 import { runWeeklyReport as realRunWeeklyReport } from './weekly.js';
@@ -21,6 +21,7 @@ export function createScheduler({ db, broadcast, hasClients, deps = {}, interval
   const {
     prepareDayPlan = realPrepareDayPlan,
     prepareIntro = realPrepareIntro,
+    readIntro = realReadIntro,
     runVibeCheck = realRunVibeCheck,
     getSchedule = realGetSchedule,
     runWeeklyReport = realRunWeeklyReport,
@@ -52,6 +53,12 @@ export function createScheduler({ db, broadcast, hasClients, deps = {}, interval
       // 07:00 当日计划 + 重热开场白（早间冷开场要带上今天的日程/天气/计划）
       if (hh === 7 && mm === 0 && once(d, 'dayplan')) {
         await prepareDayPlan(db);
+        await prepareIntro(db);
+      }
+      // 开场白预缓存翻页补热：跨日/跨时段后旧缓存必失效——若等用户点开台再现做，
+      // 开场得干等 LLM+TTS（实测撞上午夜边界约 1 分钟没声）。失效即在 30s 内补热，
+      // 同一分钟去重、失败下一分钟自动重试；07:00 的重热在上面先跑，热好后这里自然跳过。
+      if (!readIntro() && once(d, 'intro-warm')) {
         await prepareIntro(db);
       }
       // 09:00 早间节目自动开播（前端没开播才会响应，开着就忽略）

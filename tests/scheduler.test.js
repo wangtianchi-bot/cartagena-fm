@@ -4,13 +4,14 @@ import assert from 'node:assert';
 import { createScheduler } from '../src/scheduler.js';
 import { openDb } from '../src/db.js';
 
-function harness({ clients = true, schedule = null } = {}) {
+function harness({ clients = true, schedule = null, readIntro = () => ({}) } = {}) {
   const calls = { dayplan: 0, intro: 0, vibe: [], weekly: 0, pushed: 0, broadcasts: [] };
   const sch = createScheduler({
     db: openDb(':memory:'),
     broadcast: (m) => calls.broadcasts.push(m),
     hasClients: () => clients,
     deps: {
+      readIntro, // 缺省当缓存是热的，免得补热分支干扰其它用例
       prepareDayPlan: async () => { calls.dayplan++; return { date: 'x', text: 'p' }; },
       prepareIntro: async () => { calls.intro++; return {}; },
       runVibeCheck: async (db, deps, opts = {}) => {
@@ -26,6 +27,20 @@ function harness({ clients = true, schedule = null } = {}) {
 }
 
 const at = (s) => new Date(s);
+
+test('开场白缓存失效 → 调度器自动补热：同一分钟去重、下一分钟重试、热好即停', async () => {
+  let cached = null; // 模拟跨日/跨时段后的缓存失效
+  const { sch, calls } = harness({ readIntro: () => cached });
+  await sch.tick(at('2026-06-12T03:00:10+08:00'));
+  assert.equal(calls.intro, 1);                       // 失效 → 立刻补热
+  await sch.tick(at('2026-06-12T03:00:40+08:00'));
+  assert.equal(calls.intro, 1);                       // 同一分钟不重复
+  await sch.tick(at('2026-06-12T03:01:10+08:00'));
+  assert.equal(calls.intro, 2);                       // 上次没热成 → 下一分钟重试
+  cached = {};
+  await sch.tick(at('2026-06-12T03:02:10+08:00'));
+  assert.equal(calls.intro, 2);                       // 热好了 → 不再做
+});
 
 test('07:00 → 当日计划 + 开场白预热各一次；同一分钟重复 tick 不重触发', async () => {
   const { sch, calls } = harness();
