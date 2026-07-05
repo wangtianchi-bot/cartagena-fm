@@ -8,6 +8,7 @@ import { buildContext } from './context.js';
 import { askJson as realAskJson } from './llm.js';
 import { buildIntroPrompt } from './prompts.js';
 import { synthesize as realSynthesize } from './tts.js';
+import { todayStr } from './dayplan.js';
 
 const CACHE_PATH = path.join(ROOT, 'data', 'intro-cache.json');
 
@@ -16,10 +17,12 @@ export function timeSlot(d = new Date()) {
   return h < 6 ? '凌晨' : h < 11 ? '清晨' : h < 14 ? '中午' : h < 18 ? '下午' : h < 22 ? '晚上' : '深夜';
 }
 
-// 缓存命中条件：同时段（开场白提到的时间感不能错位）+ TTS 文件还在
-export function readIntro({ cachePath = CACHE_PATH, ttsDir = path.join(ROOT, 'cache', 'tts') } = {}) {
+// 缓存命中条件：同一天（开场白里带"周X好"，跨日必须作废，否则周二会播出周五的问候）
+// + 同时段（开场白提到的时间感不能错位）+ TTS 文件还在
+export function readIntro({ cachePath = CACHE_PATH, ttsDir = path.join(ROOT, 'cache', 'tts'), today = todayStr() } = {}) {
   try {
     const c = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    if (c.date !== today) return null;
     if (c.slot !== timeSlot()) return null;
     if (!fs.existsSync(path.join(ttsDir, path.basename(c.ttsUrl)))) return null;
     return { text: c.text, ttsUrl: c.ttsUrl };
@@ -33,7 +36,7 @@ export async function prepareIntro(db, deps = {}) {
   const text = String(out?.text || '').trim();
   if (!text || /《[^》]*》/.test(text)) return null;
   const file = await synthesize(text, { role: 'dj' });
-  const entry = { slot: timeSlot(), text, ttsUrl: '/tts/' + path.basename(file) };
+  const entry = { date: todayStr(), slot: timeSlot(), text, ttsUrl: '/tts/' + path.basename(file) };
   fs.mkdirSync(path.dirname(cachePath), { recursive: true });
   fs.writeFileSync(cachePath, JSON.stringify(entry, null, 2));
   return entry;

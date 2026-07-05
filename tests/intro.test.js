@@ -40,6 +40,20 @@ test('开场白出现《》→ 视为幻觉，不缓存', async () => {
   assert.ok(!fs.existsSync(cachePath));
 });
 
+test('跨日不命中：昨天落盘的开场白今天不能再播（杜绝"周二听到周五好"）', async () => {
+  const db = openDb(':memory:');
+  const cachePath = tmp();
+  const ttsDir = path.dirname(cachePath);
+  fs.writeFileSync(path.join(ttsDir, 'fake.mp3'), 'x');
+  await prepareIntro(db, {
+    cachePath,
+    askJson: async () => ({ text: '周五下午好。' }),
+    synthesize: async () => `${ttsDir}/fake.mp3`,
+  });
+  // 同时段、TTS 还在，但已经是另一天 → 必须不命中
+  assert.equal(readIntro({ cachePath, ttsDir, today: '2999-01-01' }), null);
+});
+
 test('TTS 文件丢失 → readIntro 不命中（绝不广播播不出的开场）', async () => {
   const db = openDb(':memory:');
   const cachePath = tmp();
