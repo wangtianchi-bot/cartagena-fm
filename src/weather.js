@@ -6,6 +6,8 @@ import path from 'node:path';
 import { ROOT, config } from './config.js';
 
 const CACHE_PATH = path.join(ROOT, 'data', 'weather-cache.json');
+// V1.2 城市切换：用户在界面切的城市持久化在这（个人数据、已 gitignore），优先级高于 .env 坐标
+const LOC_PATH = path.join(ROOT, 'user', 'weather.json');
 
 // WMO weather code → 中文 + 是否在下雨（雨天规则 S6 的判定源）
 const WMO = [
@@ -37,20 +39,64 @@ async function fetchOpenMeteo(lat, lon, fetchFn) {
   const parts = [text || null, `气温 ${t}°C`];
   if (Number.isFinite(hi) && Number.isFinite(lo)) parts.push(`今天 ${lo}~${hi}°C`);
   if (Number.isFinite(pop)) parts.push(`降水概率 ${pop}%`);
-  return { summary: parts.filter(Boolean).join('，'), rainy };
+  return { summary: parts.filter(Boolean).join('，'), rainy, text, temp: t };
+}
+
+// Open-Meteo 中文搜海外城市不可靠（「伦敦」只返回加拿大 London、「纽约」查无结果——2026-07 实测），
+// 常见海外城市先过这张中→英对照表；表外的海外城市输英文即可（国内城市中文直搜没问题）
+const CITY_ALIAS = {
+  '伦敦': 'London', '纽约': 'New York', '东京': 'Tokyo', '巴黎': 'Paris', '首尔': 'Seoul',
+  '洛杉矶': 'Los Angeles', '旧金山': 'San Francisco', '西雅图': 'Seattle', '新加坡': 'Singapore',
+  '曼谷': 'Bangkok', '悉尼': 'Sydney', '柏林': 'Berlin', '莫斯科': 'Moscow', '迪拜': 'Dubai',
+  '温哥华': 'Vancouver', '墨尔本': 'Melbourne',
+};
+
+// V1.2 城市名 → 坐标（Open-Meteo 免密钥地理编码）；查无此城返回 null、不猜。
+// 同名城市取人口最大的那个——「London」该是英国伦敦，不是加拿大安大略的 London（实测踩过）
+export async function geocodeCity(name, { fetchFn = fetch } = {}) {
+  const zh = name.trim();
+  const url = 'https://geocoding-api.open-meteo.com/v1/search?count=5&language=zh&format=json&name='
+    + encodeURIComponent(CITY_ALIAS[zh] || zh);
+  const res = await fetchFn(url);
+  if (!res.ok) throw new Error(`open-meteo geocoding ${res.status}`);
+  const rs = ((await res.json()).results || [])
+    .filter(r => Number.isFinite(r.latitude) && Number.isFinite(r.longitude));
+  if (!rs.length) return null;
+  const r = rs.sort((a, b) => (b.population || 0) - (a.population || 0))[0];
+  // 走对照表来的，显示名用用户输入的简体（API 的中文名可能是繁体「倫敦」）
+  return { city: CITY_ALIAS[zh] ? zh : r.name, lat: r.latitude, lon: r.longitude };
+}
+
+// 定位取值顺序：界面切过的城市（user/weather.json）> .env 坐标；都没有 = 功能未启用
+export function readLocation({ cfg = config.weather, file = LOC_PATH } = {}) {
+  try {
+    const o = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (Number.isFinite(o.lat) && Number.isFinite(o.lon)) return { ...o, source: 'user' };
+  } catch {}
+  return { lat: cfg.lat, lon: cfg.lon, city: cfg.city, source: 'env' };
+}
+
+export function setLocation({ city, lat, lon }, { file = LOC_PATH } = {}) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ city, lat, lon }, null, 2));
 }
 
 // 坐标没配 → null（功能未启用，不报错不猜城市）；缓存 30min（PRD 6.1：天气上下文缓存 ≥30min）
-export async function getWeather({ cfg = config.weather, fetchFn = fetch, cachePath = CACHE_PATH, now = Date.now } = {}) {
-  if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) return null;
+// V1.2：缓存按坐标判有效——界面一切城市，旧城市的缓存立刻作废、马上重取
+export async function getWeather({ cfg = config.weather, fetchFn = fetch, cachePath = CACHE_PATH, locFile = LOC_PATH, now = Date.now } = {}) {
+  const loc = readLocation({ cfg, file: locFile });
+  if (!Number.isFinite(loc.lat) || !Number.isFinite(loc.lon)) return null;
+  const locKey = `${loc.lat},${loc.lon}`;
   let cached = null;
   try { cached = JSON.parse(fs.readFileSync(cachePath, 'utf8')); } catch {}
+  if (cached?.loc !== locKey) cached = null;
   if (cached && now() - cached.at < cfg.cacheMs) return cached.weather;
   try {
-    const weather = await fetchOpenMeteo(cfg.lat, cfg.lon, fetchFn);
-    if (cfg.city) weather.summary = `${cfg.city}：${weather.summary}`;
+    const weather = await fetchOpenMeteo(loc.lat, loc.lon, fetchFn);
+    weather.city = loc.city || '';
+    if (loc.city) weather.summary = `${loc.city}：${weather.summary}`;
     fs.mkdirSync(path.dirname(cachePath), { recursive: true });
-    fs.writeFileSync(cachePath, JSON.stringify({ at: now(), weather }, null, 2));
+    fs.writeFileSync(cachePath, JSON.stringify({ at: now(), loc: locKey, weather }, null, 2));
     return weather;
   } catch (e) {
     console.error('[weather]', e.message);

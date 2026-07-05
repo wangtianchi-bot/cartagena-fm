@@ -13,7 +13,8 @@ import { readOpener, prepareOpener, resolveOpener } from './src/opener.js';
 import { createScheduler } from './src/scheduler.js';
 import { runWeeklyReport, readReport, applyReport, isReportDue } from './src/weekly.js';
 import { pushLark } from './src/notify.js';
-export function createApp({ db = openDb(), pipelines = {}, asr = null, intro = null, opener = null, weekly = null } = {}) {
+import { getWeather, geocodeCity, setLocation } from './src/weather.js';
+export function createApp({ db = openDb(), pipelines = {}, asr = null, intro = null, opener = null, weekly = null, weather = null } = {}) {
   // 可注入管线（测试用）；缺省接真实现
   const run = {
     start: pipelines.start ?? ((notify, nowPlaying) => pipeline.runProgramStart(db, {
@@ -331,6 +332,23 @@ export function createApp({ db = openDb(), pipelines = {}, asr = null, intro = n
     const report = weeklyDep.apply(accepted);
     broadcast({ type: 'taste-applied', report });
     res.json({ ok: true, report });
+  });
+
+  // ===== F10b 天气角标与城市切换（V1.2）：把幕后感知晒到页脚；切城市 → 地理编码 →
+  // 持久化 user/weather.json（个人数据、gitignore）→ 旧缓存按坐标即刻失效，下轮选歌就用新城市的天
+  const wx = weather ?? { get: getWeather, geocode: geocodeCity, set: setLocation };
+  app.get('/api/weather', async (req, res) => res.json({ ok: true, weather: await wx.get() }));
+  app.post('/api/weather/city', async (req, res) => {
+    const name = String(req.body?.name || '').trim();
+    if (!name) return res.status(400).json({ ok: false, error: '城市名不能为空' });
+    try {
+      const loc = await wx.geocode(name);
+      if (!loc) return res.status(404).json({ ok: false, error: `找不到「${name}」` });
+      wx.set(loc);
+      res.json({ ok: true, weather: await wx.get() });
+    } catch {
+      res.status(502).json({ ok: false, error: '地理编码服务暂时不可用' });
+    }
   });
 
   // F12 行为信号：前端上报切歌（带进度）与自然听完；点歌信号由服务端在点歌路径自动记
