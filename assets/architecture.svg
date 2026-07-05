@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="520" viewBox="0 0 940 520" font-family="-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+    <marker id="arb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0969da"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="940" height="520" fill="#ffffff" stroke="#d0d7de"/>
+
+  <!-- ============ 触发源 ============ -->
+  <text x="20" y="30" font-size="13" font-weight="700" fill="#1f2328">触发源</text>
+  <g font-size="12" fill="#1f2328">
+    <rect x="20" y="40" width="212" height="46" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="126" y="59" text-anchor="middle">⏰ 定时任务</text>
+    <text x="126" y="76" text-anchor="middle" font-size="10.5" fill="#57606a">07:00 节目计划 · 09:00 开播 · 整点检查</text>
+
+    <rect x="248" y="40" width="212" height="46" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="354" y="59" text-anchor="middle">📅 日历</text>
+    <text x="354" y="76" text-anchor="middle" font-size="10.5" fill="#57606a">重要日程前进入低打扰模式</text>
+
+    <rect x="476" y="40" width="212" height="46" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="582" y="59" text-anchor="middle">🌦 天气 Open-Meteo</text>
+    <text x="582" y="76" text-anchor="middle" font-size="10.5" fill="#57606a">雨天自动偏向空灵曲风</text>
+
+    <rect x="704" y="40" width="216" height="46" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="812" y="59" text-anchor="middle">👤 用户</text>
+    <text x="812" y="76" text-anchor="middle" font-size="10.5" fill="#57606a">点歌 · 语音热线 · 切歌/听完</text>
+  </g>
+  <line x1="126" y1="86" x2="126" y2="112" stroke="#57606a" marker-end="url(#ar)"/>
+  <line x1="354" y1="86" x2="354" y2="112" stroke="#57606a" marker-end="url(#ar)"/>
+  <line x1="582" y1="86" x2="582" y2="112" stroke="#57606a" marker-end="url(#ar)"/>
+  <line x1="812" y1="86" x2="812" y2="112" stroke="#57606a" marker-end="url(#ar)"/>
+
+  <!-- ============ Agent 核心 ============ -->
+  <rect x="20" y="112" width="646" height="208" rx="8" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="36" y="136" font-size="13" font-weight="700" fill="#1f2328">Agent 核心 —— 两段式选歌管线（防幻觉）</text>
+
+  <g font-size="12" fill="#1f2328">
+    <rect x="36" y="150" width="140" height="62" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="106" y="172" text-anchor="middle">① LLM 选歌</text>
+    <text x="106" y="189" text-anchor="middle" font-size="10.5" fill="#57606a">DeepSeek · 按品味</text>
+    <text x="106" y="202" text-anchor="middle" font-size="10.5" fill="#57606a">+ 天气/日程情境</text>
+
+    <rect x="196" y="150" width="140" height="62" rx="6" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+    <text x="266" y="172" text-anchor="middle" font-weight="700">② 现实验证</text>
+    <text x="266" y="189" text-anchor="middle" font-size="10.5" fill="#57606a">逐曲核实真实可播</text>
+    <text x="266" y="202" text-anchor="middle" font-size="10.5" fill="#57606a">网易云 / yt-dlp 兜底</text>
+
+    <rect x="356" y="150" width="140" height="62" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="426" y="172" text-anchor="middle">③ LLM 写口播</text>
+    <text x="426" y="189" text-anchor="middle" font-size="10.5" fill="#57606a">只看得到</text>
+    <text x="426" y="202" text-anchor="middle" font-size="10.5" fill="#57606a">已确认可播的歌单</text>
+
+    <rect x="516" y="150" width="134" height="62" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="583" y="172" text-anchor="middle">④ TTS 串场</text>
+    <text x="583" y="189" text-anchor="middle" font-size="10.5" fill="#57606a">豆包语音 · 只在</text>
+    <text x="583" y="202" text-anchor="middle" font-size="10.5" fill="#57606a">歌尾 ≤15s 压混</text>
+  </g>
+  <line x1="176" y1="181" x2="194" y2="181" stroke="#57606a" marker-end="url(#ar)"/>
+  <line x1="336" y1="181" x2="354" y2="181" stroke="#57606a" marker-end="url(#ar)"/>
+  <line x1="496" y1="181" x2="514" y2="181" stroke="#57606a" marker-end="url(#ar)"/>
+
+  <!-- 语音热线 -->
+  <g font-size="12" fill="#1f2328">
+    <text x="36" y="248" font-size="12" font-weight="700">☎ 语音热线</text>
+    <rect x="130" y="230" width="150" height="40" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="205" y="248" text-anchor="middle">ASR 流式识别</text>
+    <text x="205" y="263" text-anchor="middle" font-size="10.5" fill="#57606a">按住说话 · 逐字上屏</text>
+    <rect x="300" y="230" width="150" height="40" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="375" y="248" text-anchor="middle">对话 LLM</text>
+    <text x="375" y="263" text-anchor="middle" font-size="10.5" fill="#57606a">倾听型人格 · 聊到落点</text>
+    <rect x="470" y="230" width="180" height="40" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="560" y="248" text-anchor="middle">TTS 回应 + 荐一首</text>
+    <text x="560" y="263" text-anchor="middle" font-size="10.5" fill="#57606a">贴合对话推荐歌曲</text>
+  </g>
+  <line x1="280" y1="250" x2="298" y2="250" stroke="#57606a" marker-end="url(#ar)"/>
+  <line x1="450" y1="250" x2="468" y2="250" stroke="#57606a" marker-end="url(#ar)"/>
+  <text x="36" y="304" font-size="10.5" fill="#57606a">DJ 只在歌尾窗口或歌间开口，不压人声段；一次「报了不存在的歌」就击穿信任 —— ② 是 P0 红线。</text>
+
+  <!-- ============ 三层记忆 ============ -->
+  <rect x="690" y="112" width="230" height="208" rx="8" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="706" y="136" font-size="13" font-weight="700" fill="#1f2328">三层记忆 · 拼进每次 prompt</text>
+  <g font-size="12" fill="#1f2328">
+    <rect x="706" y="150" width="198" height="48" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="805" y="169" text-anchor="middle">工作记忆 · 内存</text>
+    <text x="805" y="185" text-anchor="middle" font-size="10.5" fill="#57606a">当前队列 · 串场节奏</text>
+    <rect x="706" y="206" width="198" height="48" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="805" y="225" text-anchor="middle">情节记忆 · SQLite</text>
+    <text x="805" y="241" text-anchor="middle" font-size="10.5" fill="#57606a">播放 / 对话 / 行为信号</text>
+    <rect x="706" y="262" width="198" height="48" rx="6" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+    <text x="805" y="281" text-anchor="middle">语义记忆 · Markdown</text>
+    <text x="805" y="297" text-anchor="middle" font-size="10.5" fill="#57606a">user/taste.md · 人可读可改</text>
+  </g>
+  <line x1="666" y1="216" x2="690" y2="216" stroke="#57606a" marker-end="url(#ar)" marker-start="url(#ar)"/>
+
+  <!-- ============ 品味自进化闭环 ============ -->
+  <rect x="20" y="348" width="900" height="106" rx="8" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="36" y="372" font-size="13" font-weight="700" fill="#1f2328">品味自进化闭环 —— Agent 只能提案，档案只有用户确认才会改动</text>
+  <g font-size="12" fill="#1f2328">
+    <rect x="36" y="384" width="190" height="52" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="131" y="404" text-anchor="middle">行为信号被动采集</text>
+    <text x="131" y="421" text-anchor="middle" font-size="10.5" fill="#57606a">切歌 / 听完 / 点歌 → SQLite</text>
+    <rect x="256" y="384" width="190" height="52" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="351" y="404" text-anchor="middle">每周《品味观察周报》</text>
+    <text x="351" y="421" text-anchor="middle" font-size="10.5" fill="#57606a">归纳趋势 · 生成修改提案</text>
+    <rect x="476" y="384" width="190" height="52" rx="6" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+    <text x="571" y="404" text-anchor="middle" font-weight="700">用户确认「采纳」</text>
+    <text x="571" y="421" text-anchor="middle" font-size="10.5" fill="#57606a">不采纳则一个字都不会变</text>
+    <rect x="696" y="384" width="190" height="52" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="791" y="404" text-anchor="middle">合入 taste.md</text>
+    <text x="791" y="421" text-anchor="middle" font-size="10.5" fill="#57606a">下轮选歌即用 → 越听越懂你</text>
+  </g>
+  <line x1="226" y1="410" x2="254" y2="410" stroke="#57606a" marker-end="url(#ar)"/>
+  <line x1="446" y1="410" x2="474" y2="410" stroke="#57606a" marker-end="url(#ar)"/>
+  <line x1="666" y1="410" x2="694" y2="410" stroke="#57606a" marker-end="url(#ar)"/>
+  <path d="M 886 384 L 886 340 L 805 340 L 805 324" fill="none" stroke="#0969da" stroke-dasharray="4 3" marker-end="url(#arb)"/>
+
+  <!-- ============ 底注 ============ -->
+  <text x="470" y="492" text-anchor="middle" font-size="11" fill="#57606a">全部服务跑在本机，无公网暴露 · 播放/对话/行为只存本地 SQLite · 密钥走 .env，不入库不入 git</text>
+</svg>
