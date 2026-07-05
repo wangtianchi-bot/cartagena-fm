@@ -165,6 +165,10 @@
                     animation: pulse 1.6s infinite; flex-shrink: 0; }
   #chat-mode { margin-left: auto; font-size: 10px; letter-spacing: 1px; color: var(--faint);
                text-align: right; }
+  /* V1.2.2 周报回看入口：有周报就常驻（不分待确认/已处理）。别给它写 display，会压过 hidden */
+  #btn-report { background: none; border: 0; padding: 0 2px; font-size: 13px; cursor: pointer;
+                filter: grayscale(1) opacity(.55); touch-action: manipulation; }
+  #btn-report:hover { filter: none; }
   #chat-card.hotline { border-color: rgba(61,220,132,.45); box-shadow: 0 0 20px rgba(61,220,132,.07); }
   #chat-card.hotline #chat-mode { color: var(--green); }
   #feed { flex: 1; min-height: 90px; overflow-y: auto; scrollbar-width: thin;
@@ -417,6 +421,7 @@
   <div class="card" id="chat-card">
     <div id="chat-head">
       <span class="dot"></span>与 DJ 的对话
+      <button id="btn-report" hidden aria-label="查看品味观察周报" title="品味观察周报（随时回看）">📊</button>
       <span id="chat-mode">电台模式 · 发消息＝点歌/换氛围</span>
     </div>
     <div id="feed" aria-live="polite">
@@ -435,7 +440,7 @@
     <button id="btn-send" aria-label="发送" title="发送">↑</button>
   </div>
   <footer>
-    <span class="foot-left">CARTAGENA FM · V1.2.1
+    <span class="foot-left">CARTAGENA FM · V1.2.2
       <button id="wx" hidden aria-label="当前天气，点击切换城市" title="切换城市"></button>
     </span>
     <span id="conn">CONNECTING…</span>
@@ -651,6 +656,7 @@ function handleMsg(msg) {
   }
   // F12 周报：到了就给入口；apply 结果回执
   if (msg.type === 'taste-report') tasteReportArrived(msg.report);
+  if (msg.type === 'taste-applied') { tasteReport = msg.report || tasteReport; renderReportEntry(); } // 多标签页同步回看状态
   if (msg.type === 'taste-applied') {
     addMsg('sys', '', msg.report?.status === 'applied'
       ? '✅ 勾选的建议已合入 taste.md（修订记录小节）' : '已驳回，这周不动品味档案');
@@ -1283,9 +1289,12 @@ voice.addEventListener('ended', () => hvSetTalking(false));
 voice.addEventListener('error', () => hvSetTalking(false));
 // ===== F12 品味观察周报：提案展示 + 勾选确认合入（taste.md 用户主权，不确认不动）=====
 let tasteReport = null;
+// V1.2.2 回看入口：只要有周报（不分待确认/已处理）就点亮 📊
+function renderReportEntry() { $('btn-report').hidden = !tasteReport; }
 function tasteReportArrived(report, { silent = false } = {}) {
   if (!report) { if (!silent) addMsg('sys', '', '📊 这周的收听信号还不够，没攒出周报'); return; }
   tasteReport = report;
+  renderReportEntry();
   if (report.status !== 'pending') return;
   const m = addMsg('sys', '', '📊 品味观察周报来了——这周电台对你的观察，看完勾选要不要合入档案');
   if (m) {
@@ -1312,36 +1321,59 @@ function showTasteReport() {
   for (const o of tasteReport.observations ?? []) {
     const p = document.createElement('p'); p.textContent = '· ' + o; p.style.margin = '4px 0'; card.appendChild(p);
   }
-  const sub = document.createElement('p');
-  sub.textContent = '修订建议（勾选才会写进 taste.md，原文一字不动）：';
-  sub.style.cssText = 'margin:14px 0 6px;color:#8fa89a;';
-  card.appendChild(sub);
-  const boxes = [];
-  (tasteReport.suggestions ?? []).forEach((s, i) => {
-    const lab = document.createElement('label');
-    lab.style.cssText = 'display:flex;gap:8px;align-items:flex-start;margin:6px 0;cursor:pointer;';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.dataset.idx = i; cb.style.marginTop = '5px';
-    boxes.push(cb);
-    const span = document.createElement('span');
-    span.textContent = `${s.change}（依据：${s.why}）`;
-    lab.append(cb, span);
-    card.appendChild(lab);
-  });
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;gap:10px;margin-top:16px;justify-content:flex-end;';
   const mkBtn = (txt, fn) => {
     const b = document.createElement('button');
     b.className = 'replay'; b.textContent = txt; b.onclick = fn; return b;
   };
-  const submit = (accepted) => {
-    post('/api/taste/report/apply', { accepted });
-    tasteReport = null;
-    ov.remove();
-  };
-  row.appendChild(mkBtn('全部驳回', () => submit([])));
-  row.appendChild(mkBtn('✅ 采纳所选', () => submit(boxes.filter(b => b.checked).map(b => Number(b.dataset.idx)))));
-  row.appendChild(mkBtn('稍后再说', () => ov.remove()));
+  if (tasteReport.status === 'pending') {
+    // 待确认：勾选 + 采纳/驳回（老流程原样）
+    const sub = document.createElement('p');
+    sub.textContent = '修订建议（勾选才会写进 taste.md，原文一字不动）：';
+    sub.style.cssText = 'margin:14px 0 6px;color:#8fa89a;';
+    card.appendChild(sub);
+    const boxes = [];
+    (tasteReport.suggestions ?? []).forEach((s, i) => {
+      const lab = document.createElement('label');
+      lab.style.cssText = 'display:flex;gap:8px;align-items:flex-start;margin:6px 0;cursor:pointer;';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.dataset.idx = i; cb.style.marginTop = '5px';
+      boxes.push(cb);
+      const span = document.createElement('span');
+      span.textContent = `${s.change}（依据：${s.why}）`;
+      lab.append(cb, span);
+      card.appendChild(lab);
+    });
+    // V1.2.2：处理完保留 report 供回看（服务端返回已更新状态的 report），不再置 null
+    const submit = async (accepted) => {
+      ov.remove();
+      try {
+        const j = await (await post('/api/taste/report/apply', { accepted })).json();
+        if (j?.report) tasteReport = j.report;
+      } catch {}
+      renderReportEntry();
+    };
+    row.appendChild(mkBtn('全部驳回', () => submit([])));
+    row.appendChild(mkBtn('✅ 采纳所选', () => submit(boxes.filter(b => b.checked).map(b => Number(b.dataset.idx)))));
+    row.appendChild(mkBtn('稍后再说', () => ov.remove()));
+  } else {
+    // V1.2.2 已处理 → 只读回看：标注哪些合入了，没有任何可再次提交的按钮（防二次采纳）
+    const st = document.createElement('p');
+    st.textContent = tasteReport.status === 'applied'
+      ? '这份周报已处理：带 ✅ 的修订已合入 taste.md'
+      : '这份周报已处理：当时全部驳回，taste.md 未改动';
+    st.style.cssText = 'margin:14px 0 6px;color:#8fa89a;';
+    card.appendChild(st);
+    const merged = new Set(tasteReport.applied ?? []);
+    for (const s of tasteReport.suggestions ?? []) {
+      const p = document.createElement('p');
+      p.textContent = `${merged.has(s.change) ? '✅' : '·'} ${s.change}（依据：${s.why}）`;
+      p.style.cssText = 'margin:6px 0;' + (merged.has(s.change) ? '' : 'color:#8fa89a;');
+      card.appendChild(p);
+    }
+    row.appendChild(mkBtn('关闭', () => ov.remove()));
+  }
   card.appendChild(row);
   ov.appendChild(card);
   ov.addEventListener('keydown', (e) => { if (e.key === 'Escape') ov.remove(); });
@@ -1349,9 +1381,10 @@ function showTasteReport() {
   document.body.appendChild(ov);
   card.tabIndex = -1; card.focus();
 }
-// 打开页面时若有未处理的周报，提示一次（周日 20:00 不在线也不会错过）
+// 打开页面时拉取周报：待确认的提示一次；已处理的点亮 📊 回看入口（V1.2.2）
 fetch('/api/taste/report').then(r => r.json())
   .then(j => tasteReportArrived(j.report, { silent: true })).catch(() => {});
+$('btn-report').onclick = showTasteReport;
 
 // 开发预览钩子：#hv-preview 直接看直播间（不开会话）
 if (location.hash === '#hv-preview') openHotlineView();
